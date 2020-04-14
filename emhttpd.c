@@ -73,22 +73,26 @@ int httpd_build_request(struct client_info *cinfo, struct http_req *hreq, char *
 	return nbyte;
 }
 
-static int httpd_header(const struct client_info *cinfo, int st, const char *msg) {
-	FILE *skf = fdopen(cinfo->ci_sock, "rw");
+static int httpd_header(const struct client_info *cinfo, const char *msg, int msg_size) {
+	int cbyte;
+	char buf[1024];
+	int buf_sz = sizeof(buf);
 
-	if (!skf) {
-		httpd_error("can't allocate FILE for socket");
-		return -ENOMEM;
+	cbyte = snprintf(buf, buf_sz,
+			"HTTP/1.1 %d %s\r\n"
+			"Content-Type: %s\r\n"
+			"Connection: close\r\n"
+			"\r\n",
+			200, "", "text/plain");
+
+	if (0 > write(cinfo->ci_sock, buf, cbyte)) {
+		return -errno;
 	}
 
-	fprintf(skf,
-		"HTTP/1.1 %d %s\r\n"
-		"Content-Type: %s\r\n"
-		"Connection: close\r\n"
-		"\r\n",
-		st, msg, "text/plain");
+	if (0 > write(cinfo->ci_sock, msg, msg_size)) {
+		return -errno;
+	}
 
-	fclose(skf);
 	return 0;
 }
 
@@ -105,7 +109,7 @@ static void httpd_client_process(struct client_info *cinfo) {
 			   hreq.method, hreq.uri.target, hreq.uri.query);
 
 
-	httpd_header(cinfo, 200, "!!!!!!");
+	httpd_header(cinfo, "!!!!!!", sizeof("!!!!!!"));
 }
 
 int main(int argc, char **argv) {
