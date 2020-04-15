@@ -18,6 +18,9 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+
+#include "emhttp_lib.h"
+
 #include "emhttpd.h"
 #include "config.h"
 
@@ -65,7 +68,7 @@ int httpd_build_request(struct client_info *cinfo, struct http_req *hreq, char *
 	}
 
 	memset(hreq, 0, sizeof(*hreq));
-	if (NULL == httpd_parse_request(buf, hreq)) {
+	if (NULL == http_parse_request(buf, hreq)) {
 		httpd_error("can't parse request");
 		return -EINVAL;
 	}
@@ -75,15 +78,12 @@ int httpd_build_request(struct client_info *cinfo, struct http_req *hreq, char *
 
 static int httpd_header(const struct client_info *cinfo, const char *msg, int msg_size) {
 	int cbyte;
-	char buf[1024];
+	char *buf;
 	int buf_sz = sizeof(buf);
 
-	cbyte = snprintf(buf, buf_sz,
-			"HTTP/1.1 %d %s\r\n"
-			"Content-Type: %s\r\n"
-			"Connection: close\r\n"
-			"\r\n",
-			200, "", "text/plain");
+	buf = http_get_text_response_header();
+
+	cbyte = strlen(buf);
 
 	if (0 > write(cinfo->ci_sock, buf, cbyte)) {
 		return -errno;
@@ -98,7 +98,6 @@ static int httpd_header(const struct client_info *cinfo, const char *msg, int ms
 
 static void httpd_client_process(struct client_info *cinfo) {
 	struct http_req hreq;
-	pid_t cgi_child;
 	int err;
 
 	if (0 > (err = httpd_build_request(cinfo, &hreq, httpd_g_inbuf, sizeof(httpd_g_inbuf)))) {

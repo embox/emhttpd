@@ -1,9 +1,8 @@
+BUILD_MODE = debug
 PROJECT_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 OBJS = emhttpd.o \
 	emhttp_lib.o
-
-CFLAGS +=-DUSE_IP_VER=4 -DUSE_CGI=0 -DUSE_REAL_CMD=0 -DUSE_PARALLEL_CGI=0
 
 ifeq ($(BUILD_MODE),debug)
 	CFLAGS += -g
